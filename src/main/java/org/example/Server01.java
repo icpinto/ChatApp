@@ -1,9 +1,6 @@
 package org.example;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -16,7 +13,8 @@ public class Server01 {
 
         // Start listening for connections from Server B
         new Thread(() -> {
-            try (ServerSocket serverSocket = new ServerSocket(portA)) {
+            try (ServerSocket serverSocket = new ServerSocket(portA);
+                 PrintWriter logWriter = new PrintWriter(new FileWriter("ServerA_Log.txt", true))) {
                 System.out.println("Server A started, waiting for connection from Server B...");
 
                 Socket socket = serverSocket.accept();
@@ -30,6 +28,8 @@ public class Server01 {
                     try {
                         while ((message = in.readLine()) != null) {
                             System.out.println("Server A received: " + message);
+                            logWriter.println("Received: " + message);
+                            logWriter.flush();
                         }
                     } catch (IOException e) {
                         System.err.println("Server A read error: " + e.getMessage());
@@ -41,6 +41,8 @@ public class Server01 {
                 String userInput;
                 while ((userInput = stdIn.readLine()) != null) {
                     out.println(userInput);
+                    logWriter.println("Sent: " + userInput);
+                    logWriter.flush();
                 }
 
             } catch (IOException e) {
@@ -52,7 +54,8 @@ public class Server01 {
         new Thread(() -> {
             try (Socket socket = new Socket(hostnameB, portB);
                  BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 PrintWriter logWriter = new PrintWriter(new FileWriter("ServerA_Log.txt", true))) {
 
                 System.out.println("Server A: Connected to Server B on " + hostnameB + ":" + portB);
 
@@ -61,6 +64,8 @@ public class Server01 {
                     try {
                         while ((message = in.readLine()) != null) {
                             System.out.println("Server B says: " + message);
+                            logWriter.println("Received: " + message);
+                            logWriter.flush();
                         }
                     } catch (IOException e) {
                         System.err.println("Server A client read error: " + e.getMessage());
@@ -72,6 +77,8 @@ public class Server01 {
                 String userInput;
                 while ((userInput = stdIn.readLine()) != null) {
                     out.println(userInput);
+                    logWriter.println("Sent: " + userInput);
+                    logWriter.flush();
                 }
 
             } catch (IOException e) {
