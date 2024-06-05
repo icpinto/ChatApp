@@ -25,32 +25,58 @@ public class Server01 {
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
-                String message;
-                while ((message = in.readLine()) != null) {
-                    System.out.println("Server A received: " + message);
-                    out.println("Acknowledged: " + message);
+                Thread readThread = new Thread(() -> {
+                    String message;
+                    try {
+                        while ((message = in.readLine()) != null) {
+                            System.out.println("Server A received: " + message);
+                        }
+                    } catch (IOException e) {
+                        System.err.println("Server A read error: " + e.getMessage());
+                    }
+                });
+                readThread.start();
+
+                BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
+                String userInput;
+                while ((userInput = stdIn.readLine()) != null) {
+                    out.println(userInput);
                 }
+
             } catch (IOException e) {
                 System.err.println("Server A error: " + e.getMessage());
             }
         }).start();
 
         // Connect to Server B
-        try (Socket socket = new Socket(hostnameB, portB);
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-             BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in))) {
+        new Thread(() -> {
+            try (Socket socket = new Socket(hostnameB, portB);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
 
-            System.out.println("Server A: Connected to Server B on " + hostnameB + ":" + portB);
+                System.out.println("Server A: Connected to Server B on " + hostnameB + ":" + portB);
 
-            String userInput;
-            while ((userInput = stdIn.readLine()) != null) {
-                out.println(userInput);
-                System.out.println("Server B says: " + in.readLine());
+                Thread readThread = new Thread(() -> {
+                    String message;
+                    try {
+                        while ((message = in.readLine()) != null) {
+                            System.out.println("Server B says: " + message);
+                        }
+                    } catch (IOException e) {
+                        System.err.println("Server A client read error: " + e.getMessage());
+                    }
+                });
+                readThread.start();
+
+                BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
+                String userInput;
+                while ((userInput = stdIn.readLine()) != null) {
+                    out.println(userInput);
+                }
+
+            } catch (IOException e) {
+                System.err.println("Server A client error: " + e.getMessage());
             }
-
-        } catch (IOException e) {
-            System.err.println("Server A client error: " + e.getMessage());
-        }
+        }).start();
     }
 }
