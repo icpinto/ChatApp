@@ -1,2 +1,0 @@
-Received: hello
-Sent: hellow server B

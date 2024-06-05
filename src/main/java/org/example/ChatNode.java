@@ -4,21 +4,25 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class Server01 {
+public class ChatNode implements Runnable {
+    private final String hostname; // Remote server address
+    private final int localPort; // Local listening port
+    private final int remotePort; // Remote server port
 
-    public static void main(String[] args) {
-        int portA = 12345; // Server A listening port
-        String hostnameB = "localhost"; // Server B hostname
-        int portB = 12346; // Server B listening port
+    public ChatNode(String hostname, int localPort, int remotePort) {
+        this.hostname = hostname;
+        this.localPort = localPort;
+        this.remotePort = remotePort;
+    }
 
-        // Start listening for connections from Server B
+    public void startServer() {
         new Thread(() -> {
-            try (ServerSocket serverSocket = new ServerSocket(portA);
-                 PrintWriter logWriter = new PrintWriter(new FileWriter("ServerA_Log.txt", true))) {
-                System.out.println("Server A started, waiting for connection from Server B...");
+            try (ServerSocket serverSocket = new ServerSocket(localPort);
+                 PrintWriter logWriter = new PrintWriter(new FileWriter("ChatNode_Log.txt", true))) {
+                System.out.println("ChatNode started, waiting for connection on port " + localPort + "...");
 
                 Socket socket = serverSocket.accept();
-                System.out.println("Server A: Connected to Server B");
+                System.out.println("ChatNode: Connected to client");
 
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -27,12 +31,12 @@ public class Server01 {
                     String message;
                     try {
                         while ((message = in.readLine()) != null) {
-                            System.out.println("Server A received: " + message);
+                            System.out.println("Received: " + message);
                             logWriter.println("Received: " + message);
                             logWriter.flush();
                         }
                     } catch (IOException e) {
-                        System.err.println("Server A read error: " + e.getMessage());
+                        System.err.println("ChatNode read error: " + e.getMessage());
                     }
                 });
                 readThread.start();
@@ -46,29 +50,30 @@ public class Server01 {
                 }
 
             } catch (IOException e) {
-                System.err.println("Server A error: " + e.getMessage());
+                System.err.println("ChatNode server error: " + e.getMessage());
             }
         }).start();
+    }
 
-        // Connect to Server B
+    public void startClient() {
         new Thread(() -> {
-            try (Socket socket = new Socket(hostnameB, portB);
+            try (Socket socket = new Socket(hostname, remotePort);
                  BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                  PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                 PrintWriter logWriter = new PrintWriter(new FileWriter("ServerA_Log.txt", true))) {
+                 PrintWriter logWriter = new PrintWriter(new FileWriter("ChatNode_Log.txt", true))) {
 
-                System.out.println("Server A: Connected to Server B on " + hostnameB + ":" + portB);
+                System.out.println("ChatNode: Connected to server on " + hostname + ":" + remotePort);
 
                 Thread readThread = new Thread(() -> {
                     String message;
                     try {
                         while ((message = in.readLine()) != null) {
-                            System.out.println("Server B says: " + message);
+                            System.out.println("Server says: " + message);
                             logWriter.println("Received: " + message);
                             logWriter.flush();
                         }
                     } catch (IOException e) {
-                        System.err.println("Server A client read error: " + e.getMessage());
+                        System.err.println("ChatNode client read error: " + e.getMessage());
                     }
                 });
                 readThread.start();
@@ -82,8 +87,22 @@ public class Server01 {
                 }
 
             } catch (IOException e) {
-                System.err.println("Server A client error: " + e.getMessage());
+                System.err.println("ChatNode client error: " + e.getMessage());
             }
         }).start();
+    }
+
+    @Override
+    public void run() {
+        startServer();
+        startClient();
+    }
+
+    public static void main(String[] args) {
+        //ChatNode node1 = new ChatNode("localhost", 12345, 12346);
+        ChatNode node2 = new ChatNode("localhost", 12346, 12345);
+
+        //new Thread(node1).start();
+        new Thread(node2).start();
     }
 }
