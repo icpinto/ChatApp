@@ -52,23 +52,32 @@ public class ServerNode extends  Node implements Runnable {
 
     public void startServer() {
         new Thread(() -> {
-            try (ServerSocket serverSocket = new ServerSocket(this.localPort);
-                 PrintWriter logWriter = new PrintWriter(new FileWriter("ChatNode_Log.txt", true))) {
-                System.out.println("ChatNode started, waiting for connection on port " + this.localPort + "...");
+            try (ServerSocket serverSocket = new ServerSocket(this.localPort)) {
+                System.out.println("ChatNode started, waiting for connections on port " + this.localPort + "...");
 
-                Socket socket = serverSocket.accept();
-                System.out.println("ChatNode: Connected to client");
+                while (true) {
+                    Socket socket = serverSocket.accept();
+                    System.out.println("ChatNode: Connected to client");
 
-                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-
-                startReading(in, logWriter);
-                startWriting(out, logWriter);
-
+                    new Thread(() -> handleClient(socket)).start();
+                }
             } catch (IOException e) {
                 System.err.println("ChatNode server error: " + e.getMessage());
             }
         }).start();
+    }
+
+    private void handleClient(Socket socket) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             PrintWriter logWriter = new PrintWriter(new FileWriter("ChatNode_Log.txt", true))) {
+
+            startReading(in, logWriter);
+            startWriting(out, logWriter);
+
+        } catch (IOException e) {
+            System.err.println("ChatNode handle client error: " + e.getMessage());
+        }
     }
 
     public void startClient(String hostname, int remotePort) {

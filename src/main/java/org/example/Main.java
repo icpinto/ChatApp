@@ -7,6 +7,7 @@ public class Main {
         ServerNode sn1 = new ServerNode(11111);
         new Thread(sn1).start();
         ServerNode.addChatNode("localhost", 12111, 11111);
+        ServerNode.addChatNode("localhost", 12211, 11111);
 
     }
 }
