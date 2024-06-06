@@ -4,11 +4,9 @@ package org.example;
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
     public static void main(String[] args) {
-        ChatNode node1 = new ChatNode("localhost", 12345, 12346, "node1");
-        //ChatNode node2 = new ChatNode("localhost", 12346, 12345);
-
-        new Thread(node1).start();
-        //new Thread(node2).start();
+        ServerNode sn1 = new ServerNode(11111);
+        new Thread(sn1).start();
+        ServerNode.addChatNode("localhost", 12111, 11111);
 
     }
 }
