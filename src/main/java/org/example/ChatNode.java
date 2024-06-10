@@ -3,8 +3,7 @@ package org.example;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class ChatNode extends Node implements Runnable {
 
@@ -12,6 +11,8 @@ public class ChatNode extends Node implements Runnable {
     private  Map<String, Integer> remotePorts = new HashMap<>();
     private final String hostname = "localhost";
     private final int serverNodePort;
+    private final List<String> messageHistory = new ArrayList<>(); // List to store messages
+
     public ChatNode(int localPort, int serverNodePort, String userName) {
         super(localPort);
         this.userName = userName;
@@ -47,8 +48,17 @@ public class ChatNode extends Node implements Runnable {
                  PrintWriter logWriter = new PrintWriter(new FileWriter("ChatNode_Log.txt", true))) {
 
                 System.out.println("ChatNode: Connected to server on " + this.hostname + ":" + this.serverNodePort);
-                startReading(in, logWriter);
-                startWriting(out, logWriter);
+                new Thread(() -> startReading(in, logWriter)).start();
+                /**new Thread(() -> {
+                    try {
+                        startWriting(out, logWriter);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();**/
+                //startReading(in, logWriter);
+                //startWriting(out, logWriter);
+                showMenu(out);
 
             } catch (IOException e) {
                 System.err.println("ChatNode client error: " + e.getMessage());
@@ -61,7 +71,9 @@ public class ChatNode extends Node implements Runnable {
             String message;
             try {
                 while ((message = in.readLine()) != null) {
-                    System.out.println("Server says: " + message);
+                    synchronized (messageHistory) {
+                        messageHistory.add(message); // Store received messages
+                    }
                     logWriter.println("Received: " + message);
                     logWriter.flush();
                 }
@@ -84,6 +96,79 @@ public class ChatNode extends Node implements Runnable {
         } catch (IOException e) {
             System.err.println("ChatNode client write error: " + e.getMessage());
         }
+    }
+
+    private void showMenu(PrintWriter out) {
+        Scanner scanner = new Scanner(System.in);
+        String choice;
+
+        while (true) {
+            System.out.println("Menu:");
+            System.out.println("1. Read Messages");
+            System.out.println("2. Send Message");
+            System.out.println("3. Send Private Message");
+            System.out.println("4. Exit");
+            System.out.print("Enter your choice: ");
+            choice = scanner.nextLine();
+
+            switch (choice) {
+                case "1":
+                    readMessages();
+                    break;
+                case "2":
+                    sendMessage(scanner, out);
+                    break;
+                case "3":
+                    sendPrivateMessage(scanner, out);
+                    break;
+                case "4":
+                    exitApplication(out);
+                    return;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+
+    private void readMessages() {
+        System.out.println("Reading messages from server...");
+        synchronized (messageHistory) {
+            for (String message : messageHistory) {
+                System.out.println(message);
+            }
+        }
+    }
+
+    private void sendMessage(Scanner scanner, PrintWriter out) {
+        System.out.print("Enter your message: ");
+        String message = scanner.nextLine();
+        out.println(message);
+        logMessage("Sent: " + message);
+    }
+
+    private void sendPrivateMessage(Scanner scanner, PrintWriter out) {
+        System.out.print("Enter recipient's username: ");
+        String recipient = scanner.nextLine();
+        System.out.print("Enter your message: ");
+        String message = scanner.nextLine();
+        out.println("/pm " + recipient + " " + message);
+        logMessage("Sent private message to " + recipient + ": " + message);
+    }
+
+    private void logMessage(String message) {
+        try (PrintWriter logWriter = new PrintWriter(new FileWriter("ChatNode_Log.txt", true))) {
+            logWriter.println(message);
+        } catch (IOException e) {
+            System.err.println("Error logging message: " + e.getMessage());
+        }
+    }
+
+    private void exitApplication(PrintWriter out) {
+        System.out.println("Exiting application...");
+        if (out != null) {
+            out.close();
+        }
+        System.exit(0);
     }
 
 
